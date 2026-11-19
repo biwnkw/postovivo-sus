@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PostoVivo SUS | Painel da UBS</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/app.js" defer></script>
+</head>
+
+<body>
+
+    <a class="skip-link" href="#inicio">
+        Pular para o conteúdo
+    </a>
+
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon" aria-hidden="true">+</div>
+
+            <div>
+                <strong>PostoVivo</strong>
+                <span>Gestão em saúde</span>
+            </div>
+        </div>
+
+        <div class="unit-profile">
+            <span>Unidade de atendimento</span>
+            <strong>UBS Jardim Aurora</strong>
+        </div>
+
+        <nav aria-label="Menu principal">
+            <a href="#inicio">Visão geral</a>
+            <a href="#balcao">Especialistas</a>
+            <a href="#atendimento">Movimento da unidade</a>
+            <a href="#fila">Fila de espera</a>
+            <a href="#agendamentos">Agendamentos</a>
+            <a href="#voz">Atendimento por voz</a>
+            <a href="#mapa">Transparência</a>
+            <a href="#acessibilidade">Acessibilidade</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span>Ambiente acadêmico</span>
+            <p>Saúde pública mais acessível e conectada.</p>
+        </div>
+
+    </aside>
+
+    <main id="inicio">
+
+        <header class="topbar">
+
+            <div>
+                <span class="eyebrow">GESTÃO DA UNIDADE</span>
+                <h1>Painel de atendimento</h1>
+                <p>Acompanhe e atualize as informações da UBS.</p>
+            </div>
+
+            <div class="connection">
+                <p id="live" role="status">
+                    Conectando ao servidor...
+                </p>
+            </div>
+
+        </header>
+
+        <div class="welcome">
+
+            <div>
+                <span class="eyebrow">POSTOVIVO SUS</span>
+                <h2>Informação que aproxima.</h2>
+
+                <p>
+                    Mantenha os cidadãos informados e contribua
+                    para um atendimento mais organizado.
+                </p>
+            </div>
+
+            <span class="welcome-badge">
+                Painel da unidade
+            </span>
+
+        </div>
+
+        <section class="overview" aria-labelledby="overview-title">
+
+            <h2 id="overview-title">Visão geral</h2>
+
+            <div class="stats-grid">
+
+                <article class="stat-card">
+
+                    <span>Movimento da unidade</span>
+
+                    <strong id="indicador-lotacao">
+                        Aguardando atualização
+                    </strong>
+
+                    <a href="#atendimento">
+                        Atualizar movimento
+                    </a>
+
+                </article>
+
+                <article class="stat-card">
+
+                    <span>Especialistas monitorados</span>
+
+                    <strong id="indicador-especialista">
+                        Aguardando atualização
+                    </strong>
+
+                    <a href="#balcao">
+                        Gerenciar presença
+                    </a>
+
+                </article>
+
+                <article class="stat-card">
+
+                    <span>Cidadãos na fila de espera</span>
+
+                    <strong id="indicador-fila">
+                        Aguardando atualização
+                    </strong>
+
+                    <a href="#fila">
+                        Consultar fila
+                    </a>
+
+                </article>
+
+                <article class="stat-card">
+
+                    <span>Vagas para encaixe</span>
+
+                    <strong id="indicador-vagas">
+                        Aguardando atualização
+                    </strong>
+
+                    <a href="#voz">
+                        Gerenciar atendimento
+                    </a>
+
+                </article>
+
+                <article class="stat-card">
+
+                    <span>Agendamentos da Agendinha</span>
+
+                    <strong id="indicador-agendamentos">
+                        Aguardando atualização
+                    </strong>
+
+                    <a href="#agendamentos">
+                        Consultar agendamentos
+                    </a>
+
+                </article>
+
+            </div>
+
+        </section>
+
+        <div class="dashboard-grid">
+
+            <section id="balcao" class="panel">
+
+                <div class="panel-heading">
+
+                    <span class="eyebrow">
+                        EQUIPE DE SAÚDE
+                    </span>
+
+                    <h2>Especialistas</h2>
+
+                    <p>
+                        Informe a disponibilidade dos profissionais
+                        para os cidadãos.
+                    </p>
+
+                </div>
+
+                <article class="professional">
+
+                    <div class="avatar" aria-hidden="true">
+                        HD
+                    </div>
+
+                    <div>
+                        <h3>Dra. Helena Duarte</h3>
+                        <p>Cardiologia</p>
+                        <span>RQE demonstrativo 201</span>
+                    </div>
+
+                </article>
+
+                <div class="professional-status">
+
+                    <strong>Disponibilidade hoje</strong>
+
+                    <button
+                        id="presenca"
+                        type="button"
+                        role="switch"
+                        aria-checked="false"
+                    >
+                        Presença hoje
+                    </button>
+
+                </div>
+
+                <p class="helper">
+                    As alterações são compartilhadas com o
+                    aplicativo do cidadão.
+                </p>
+
+            </section>
+
+            <section id="atendimento" class="panel">
+
+                <div class="panel-heading">
+
+                    <span class="eyebrow">ATENDIMENTO</span>
+
+                    <h2>Movimento da unidade</h2>
+
+                    <p>
+                        Atualize a situação atual de atendimento
+                        da UBS.
+                    </p>
+
+                </div>
+
+                <label for="lotacao">
+                    Situação do atendimento
+                </label>
+
+                <select id="lotacao">
+
+                    <option value="tranquila">
+                        Pouco movimento
+                    </option>
+
+                    <option value="moderada">
+                        Movimento moderado
+                    </option>
+
+                    <option value="lotada">
+                        Muito movimento
+                    </option>
+
+                </select>
+
+                <div class="information-box">
+
+                    <strong>Importante</strong>
+
+                    <p>
+                        Informações atualizadas ajudam o cidadão
+                        a planejar sua ida à unidade. O movimento
+                        não representa uma previsão do tempo de espera.
+                    </p>
+
+                </div>
+
+            </section>
+
+            <section id="fila" class="panel full-width">
+
+                <div class="panel-heading">
+
+                    <span class="eyebrow">
+                        GESTÃO DA FILA
+                    </span>
+
+                    <h2>Fila de espera</h2>
+
+                    <p>
+                        Acompanhe os cidadãos que aguardam uma vaga
+                        para consulta.
+                    </p>
+
+                </div>
+
+                <div class="information-box">
+
+                    <strong>Ordem de atendimento</strong>
+
+                    <p>
+                        As posições são calculadas automaticamente
+                        por especialidade e ordem de entrada.
+                        Esta demonstração não representa classificação
+                        de risco clínico.
+                    </p>
+
+                </div>
+
+                <div class="appointment-toolbar">
+
+                    <div class="appointment-search">
+
+                        <label for="buscar-fila">
+                            Buscar protocolo
+                        </label>
+
+                        <input
+                            id="buscar-fila"
+                            type="search"
+                            placeholder="Ex.: SUS-4092"
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                    <div class="appointment-filter">
+
+                        <label for="filtro-fila">
+                            Especialidade
+                        </label>
+
+                        <select id="filtro-fila">
+
+                            <option value="todos">
+                                Todas as especialidades
+                            </option>
+
+                            <option value="Cardiologia">
+                                Cardiologia
+                            </option>
+
+                            <option value="Clínica Geral">
+                                Clínica Geral
+                            </option>
+
+                            <option value="Oftalmologia">
+                                Oftalmologia
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <p id="total-fila" role="status">
+                    Consultando fila de espera...
+                </p>
+
+                <div
+                    class="table-container"
+                    tabindex="0"
+                    role="region"
+                    aria-label="Tabela da fila de espera"
+                >
+
+                    <table class="appointments-table">
+
+                        <caption>
+                            Cidadãos que aguardam uma vaga
+                        </caption>
+
+                        <thead>
+
+                            <tr>
+                                <th scope="col">Posição</th>
+                                <th scope="col">Protocolo</th>
+                                <th scope="col">Especialidade</th>
+                                <th scope="col">Pessoas à frente</th>
+                                <th scope="col">Situação</th>
+                                <th scope="col">Ações</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="lista-fila">
+
+                            <tr>
+
+                                <td colspan="6">
+                                    Aguardando informações...
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <p
+                    class="helper"
+                    id="atualizacao-fila"
+                >
+                    Aguardando sincronização.
+                </p>
+
+            </section>
+
+            <section id="agendamentos" class="panel full-width">
+
+                <div class="panel-heading">
+
+                    <span class="eyebrow">
+                        AGENDINHA
+                    </span>
+
+                    <h2>Agendamentos de consultas</h2>
+
+                    <p>
+                        Acompanhe as consultas realizadas pelos
+                        cidadãos através da assistente virtual.
+                    </p>
+
+                </div>
+
+                <div class="information-box">
+
+                    <strong>Atendimento integrado</strong>
+
+                    <p>
+                        Os agendamentos realizados no aplicativo
+                        aparecem automaticamente neste painel.
+                        Consultas confirmadas não fazem parte
+                        da fila de espera.
+                    </p>
+
+                </div>
+
+                <div class="appointment-toolbar">
+
+                    <div class="appointment-search">
+
+                        <label for="buscar-agendamento">
+                            Buscar agendamento
+                        </label>
+
+                        <input
+                            id="buscar-agendamento"
+                            type="search"
+                            placeholder="Protocolo ou especialista"
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                    <div class="appointment-filter">
+
+                        <label for="filtro-especialidade">
+                            Especialidade
+                        </label>
+
+                        <select id="filtro-especialidade">
+
+                            <option value="todos">
+                                Todas as especialidades
+                            </option>
+
+                            <option value="Cardiologia">
+                                Cardiologia
+                            </option>
+
+                            <option value="Clínica Geral">
+                                Clínica Geral
+                            </option>
+
+                            <option value="Oftalmologia">
+                                Oftalmologia
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <p id="total-agendamentos" role="status">
+                    Consultando agendamentos...
+                </p>
+
+                <div
+                    class="table-container"
+                    tabindex="0"
+                    role="region"
+                    aria-label="Tabela de consultas agendadas"
+                >
+
+                    <table class="appointments-table">
+
+                        <caption>
+                            Consultas registradas pela Agendinha
+                        </caption>
+
+                        <thead>
+
+                            <tr>
+                                <th scope="col">Protocolo</th>
+                                <th scope="col">Especialidade</th>
+                                <th scope="col">Profissional</th>
+                                <th scope="col">Data</th>
+                                <th scope="col">Horário</th>
+                                <th scope="col">Origem</th>
+                                <th scope="col">Status</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="lista-agendamentos">
+
+                            <tr>
+
+                                <td colspan="7">
+                                    Aguardando informações...
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <p
+                    class="helper"
+                    id="atualizacao-agendamentos"
+                >
+                    Aguardando atualização do servidor.
+                </p>
+
+            </section>
+
+            <section id="voz" class="panel full-width">
+
+                <div class="panel-heading">
+
+                    <span class="eyebrow">
+                        INCLUSÃO DIGITAL
+                    </span>
+
+                    <h2>Atendimento por voz</h2>
+
+                    <p>
+                        Simule o atendimento telefônico para cidadãos
+                        que não utilizam smartphones.
+                    </p>
+
+                </div>
+
+                <div class="voice-grid">
+
+                    <form id="cadastro">
+
+                        <h3>Cadastro do protocolo</h3>
+
+                        <label for="codigo">
+                            Código do protocolo
+                        </label>
+
+                        <input
+                            id="codigo"
+                            value="SUS-7001"
+                            autocomplete="off"
+                            required
+                        >
+
+                        <label for="telefone">
+                            Telefone fictício com DDD
+                        </label>
+
+                        <input
+                            id="telefone"
+                            type="tel"
+                            value="11000000000"
+                            inputmode="tel"
+                            required
+                        >
+
+                        <button type="submit">
+                            Cadastrar protocolo
+                        </button>
+
+                    </form>
+
+                    <div class="voice-instructions">
+
+                        <h3>Como funciona?</h3>
+
+                        <ol>
+                            <li>Cadastre o protocolo do paciente.</li>
+                            <li>Inicie a chamada simulada.</li>
+                            <li>Confirme ou cancele o atendimento.</li>
+                        </ol>
+
+                        <p>
+                            Quando um paciente cancela, a vaga
+                            é oferecida ao primeiro cidadão
+                            da fila de cardiologia.
+                        </p>
+
+                        <div id="protocolo" hidden>
+
+                            <p id="fase" role="status"></p>
+
+                            <button id="ligar" type="button">
+                                Chamar paciente
+                            </button>
+
+                            <div id="teclas" hidden>
+
+                                <p>
+                                    Consulta demonstrativa de cardiologia
+                                    na segunda-feira, às 10h.
+                                </p>
+
+                                <button type="button" data-tecla="1">
+                                    1 · Confirmar consulta
+                                </button>
+
+                                <button type="button" data-tecla="2">
+                                    2 · Não posso comparecer
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+            <section id="mapa" class="panel">
+
+                <div class="panel-heading">
+
+                    <span class="eyebrow">
+                        PARTICIPAÇÃO CIDADÃ
+                    </span>
+
+                    <h2>Transparência</h2>
+
+                    <p>
+                        Informações compartilhadas entre a unidade
+                        e a comunidade.
+                    </p>
+
+                </div>
+
+                <h3>Jardim Aurora</h3>
+
+                <p>UBS Jardim Aurora</p>
+
+                <p id="movimento">
+                    Aguardando informações...
+                </p>
+
+                <div class="information-box">
+                    Os registros de movimento também podem
+                    ser enviados pelos cidadãos através do aplicativo.
+                </div>
+
+            </section>
+
+            <section id="acessibilidade" class="panel">
+
+                <div class="panel-heading">
+
+                    <span class="eyebrow">
+                        ACESSO PARA TODOS
+                    </span>
+
+                    <h2>Acessibilidade</h2>
+
+                    <p>
+                        Personalize sua experiência no painel.
+                    </p>
+
+                </div>
+
+                <button
+                    id="contraste"
+                    type="button"
+                    aria-pressed="false"
+                >
+                    Ativar alto contraste
+                </button>
+
+                <div class="font-controls">
+
+                    <strong>Tamanho do texto</strong>
+
+                    <button id="fonte-normal" type="button">
+                        Padrão
+                    </button>
+
+                    <button id="fonte-maior" type="button">
+                        Ampliado
+                    </button>
+
+                    <button id="fonte-grande" type="button">
+                        Muito grande
+                    </button>
+
+                </div>
+
+                <p class="helper">
+                    Utilize também a tecla Tab para navegar
+                    pelos elementos do painel.
+                </p>
+
+            </section>
+
+        </div>
+
+        <div
+            id="resultado"
+            role="status"
+            aria-live="polite"
+        ></div>
+
+        <footer class="footer">
+
+            <p>PostoVivo SUS · Global Solution CitizenTech</p>
+
+            <p>Projeto acadêmico com dados fictícios.</p>
+
+        </footer>
+
+    </main>
+
+</body>
+</html>

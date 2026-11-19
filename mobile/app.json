@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "PostoVivo SUS",
+    "slug": "postovivo-sus",
+    "version": "1.0.0",
+    "ios": {
+      "bundleIdentifier": "br.edu.postovivo.sus",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Permita que a Agendinha ouça suas solicitações de agendamento.",
+        "NSSpeechRecognitionUsageDescription": "Permita que a Agendinha reconheça sua fala."
+      }
+    },
+    "android": {
+      "package": "br.edu.postovivo.sus",
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-speech-recognition",
+      "expo-dev-client"
+    ]
+  }
+}
