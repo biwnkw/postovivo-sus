@@ -2,25 +2,14 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 
-const unit = {
-    id: 'DEMO-01',
-    nome: 'UBS Jardim Aurora',
-    bairro: 'Jardim Aurora',
-    endereco: 'Rua das Acácias, 120',
-    horario: 'Segunda a sexta, das 7h às 19h',
-    lotacao: 'tranquila',
-    atualizado: new Date().toISOString()
-};
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const doctor = {
-    nome: 'Dra. Helena Duarte',
-    especialidade: 'Cardiologia',
-    crm: 'DEMO 1001',
-    rqe: 'DEMO 201',
-    dias: 'Segundas e quintas',
-    presente: false,
-    atualizado: unit.atualizado
-};
+const databaseEnabled = Boolean(SUPABASE_URL && SUPABASE_KEY);
+
+if (Boolean(SUPABASE_URL) !== Boolean(SUPABASE_KEY)) {
+    throw new Error('Configuração incompleta do Supabase.');
+}
 
 function nextDate(weekday) {
     const today = new Intl.DateTimeFormat('en-CA', {
@@ -31,203 +20,251 @@ function nextDate(weekday) {
     }).format(new Date());
 
     const date = new Date(today + 'T12:00:00Z');
+    const difference = (weekday - date.getUTCDay() + 7) % 7 || 7;
 
-    let difference =
-        (weekday - date.getUTCDay() + 7) % 7;
-
-    if (difference === 0) {
-        difference = 7;
-    }
-
-    date.setUTCDate(
-        date.getUTCDate() + difference
-    );
+    date.setUTCDate(date.getUTCDate() + difference);
 
     return date.toISOString().slice(0, 10);
 }
 
-const agenda = [
-    {
-        id: 'AG-001',
-        especialista: 'Dra. Helena Duarte',
+function initialState() {
+    const now = new Date().toISOString();
+
+    const unit = {
+        id: 'DEMO-01',
+        nome: 'UBS Jardim Aurora',
+        bairro: 'Jardim Aurora',
+        endereco: 'Rua das Acácias, 120',
+        horario: 'Segunda a sexta, das 7h às 19h',
+        lotacao: 'tranquila',
+        atualizado: now
+    };
+
+    const doctor = {
+        nome: 'Dra. Helena Duarte',
         especialidade: 'Cardiologia',
-        dia: 'Segunda-feira',
-        data: nextDate(1),
-        horario: '09:00',
+        crm: 'DEMO 1001',
+        rqe: 'DEMO 201',
+        dias: 'Segundas e quintas',
+        presente: false,
+        atualizado: now
+    };
+
+    const createSlot = (
+        id,
+        especialista,
+        especialidade,
+        dia,
+        weekday,
+        horario
+    ) => ({
+        id,
+        especialista,
+        especialidade,
+        dia,
+        data: nextDate(weekday),
+        horario,
         unidade: unit.nome,
         endereco: unit.endereco,
         disponivel: true
-    },
-    {
-        id: 'AG-002',
-        especialista: 'Dra. Helena Duarte',
-        especialidade: 'Cardiologia',
-        dia: 'Quinta-feira',
-        data: nextDate(4),
-        horario: '14:30',
-        unidade: unit.nome,
-        endereco: unit.endereco,
-        disponivel: true
-    },
-    {
-        id: 'AG-003',
-        especialista: 'Dr. Rafael Almeida',
-        especialidade: 'Clínica Geral',
-        dia: 'Terça-feira',
-        data: nextDate(2),
-        horario: '10:00',
-        unidade: unit.nome,
-        endereco: unit.endereco,
-        disponivel: true
-    },
-    {
-        id: 'AG-004',
-        especialista: 'Dra. Marina Costa',
-        especialidade: 'Oftalmologia',
-        dia: 'Quarta-feira',
-        data: nextDate(3),
-        horario: '11:30',
-        unidade: unit.nome,
-        endereco: unit.endereco,
-        disponivel: true
-    },
-    {
-        id: 'AG-005',
-        especialista: 'Dra. Marina Costa',
-        especialidade: 'Oftalmologia',
-        dia: 'Sexta-feira',
-        data: nextDate(5),
-        horario: '15:00',
-        unidade: unit.nome,
-        endereco: unit.endereco,
-        disponivel: true
+    });
+
+    return {
+        versao: randomUUID(),
+        unit,
+        doctor,
+        offer: false,
+        sequence: 4,
+        reports: [],
+        bookings: [],
+
+        agenda: [
+            createSlot('AG-001', 'Dra. Helena Duarte', 'Cardiologia', 'Segunda-feira', 1, '09:00'),
+            createSlot('AG-002', 'Dra. Helena Duarte', 'Cardiologia', 'Quinta-feira', 4, '14:30'),
+            createSlot('AG-003', 'Dr. Rafael Almeida', 'Clínica Geral', 'Terça-feira', 2, '10:00'),
+            createSlot('AG-004', 'Dra. Marina Costa', 'Oftalmologia', 'Quarta-feira', 3, '11:30'),
+            createSlot('AG-005', 'Dra. Marina Costa', 'Oftalmologia', 'Sexta-feira', 5, '15:00')
+        ],
+
+        protocols: Object.fromEntries(
+            ['SUS-4089', 'SUS-4090', 'SUS-4092', 'SUS-4093']
+                .map((codigo, index) => [
+                    codigo,
+                    {
+                        status: 'aguardando',
+                        especialidade: 'Cardiologia',
+                        canal: 'app',
+                        ordem: index + 1
+                    }
+                ])
+        )
+    };
+}
+
+let memoryState = initialState();
+
+async function databaseRequest(query, method = 'GET', body, prefer) {
+    const headers = {
+        apikey: SUPABASE_KEY,
+        'Content-Type': 'application/json'
+    };
+
+    if (!SUPABASE_KEY.startsWith('sb_secret_')) {
+        headers.Authorization = `Bearer ${SUPABASE_KEY}`;
     }
-];
 
-const bookings = [];
-const reports = [];
-const streams = new Set();
+    if (prefer) {
+        headers.Prefer = prefer;
+    }
 
-let offer = false;
-let sequence = 4;
+    const response = await fetch(
+        SUPABASE_URL.replace(/\/+$/, '') +
+        '/rest/v1/postovivo_estado' +
+        query,
+        {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : undefined,
+            signal: AbortSignal.timeout(8000)
+        }
+    );
 
-const protocols = new Map([
-    [
-        'SUS-4089',
-        {
-            status: 'aguardando',
-            especialidade: 'Cardiologia',
-            canal: 'app',
-            ordem: 1
-        }
-    ],
-    [
-        'SUS-4090',
-        {
-            status: 'aguardando',
-            especialidade: 'Cardiologia',
-            canal: 'app',
-            ordem: 2
-        }
-    ],
-    [
-        'SUS-4092',
-        {
-            status: 'aguardando',
-            especialidade: 'Cardiologia',
-            canal: 'app',
-            ordem: 3
-        }
-    ],
-    [
-        'SUS-4093',
-        {
-            status: 'aguardando',
-            especialidade: 'Cardiologia',
-            canal: 'app',
-            ordem: 4
-        }
-    ]
-]);
+    if (!response.ok) {
+        console.error('Erro no Supabase:', response.status);
+        throw new Error('Banco de dados indisponível.');
+    }
 
-function waitingQueue(especialidade) {
-    return [...protocols.entries()]
+    return response.json();
+}
+
+async function loadState() {
+    if (!databaseEnabled) {
+        return structuredClone(memoryState);
+    }
+
+    let rows = await databaseRequest(
+        '?id=eq.demo&select=dados'
+    );
+
+    if (rows.length === 0) {
+        await databaseRequest(
+            '?on_conflict=id',
+            'POST',
+            {
+                id: 'demo',
+                dados: initialState(),
+                atualizado_em: new Date().toISOString()
+            },
+            'resolution=ignore-duplicates,return=representation'
+        );
+
+        rows = await databaseRequest(
+            '?id=eq.demo&select=dados'
+        );
+    }
+
+    if (!rows[0]?.dados?.versao) {
+        throw new Error('Estado do banco inválido.');
+    }
+
+    return rows[0].dados;
+}
+
+async function saveState(state) {
+    const previousVersion = state.versao;
+
+    const updated = {
+        ...state,
+        versao: randomUUID()
+    };
+
+    if (!databaseEnabled) {
+        if (memoryState.versao !== previousVersion) {
+            return false;
+        }
+
+        memoryState = structuredClone(updated);
+        return true;
+    }
+
+    const params = new URLSearchParams({
+        id: 'eq.demo',
+        'dados->>versao': `eq.${previousVersion}`
+    });
+
+    const rows = await databaseRequest(
+        '?' + params.toString(),
+        'PATCH',
+        {
+            dados: updated,
+            atualizado_em: new Date().toISOString()
+        },
+        'return=representation'
+    );
+
+    return rows.length === 1;
+}
+
+function waitingQueue(state, especialidade) {
+    return Object.entries(state.protocols)
         .filter(([codigo, item]) =>
             item.status === 'aguardando' &&
             item.canal === 'app' &&
-            (!especialidade ||
-                item.especialidade === especialidade)
+            (!especialidade || item.especialidade === especialidade)
         )
         .sort((a, b) => a[1].ordem - b[1].ordem);
 }
 
-function getPosition(codigo) {
-    const item = protocols.get(codigo);
-
-    if (
-        !item ||
-        item.status !== 'aguardando' ||
-        item.canal !== 'app'
-    ) {
-        return null;
+function getProtocol(state, codigo) {
+    if (!Object.hasOwn(state.protocols, codigo)) {
+        return undefined;
     }
 
-    const queue = waitingQueue(
-        item.especialidade
-    );
+    const item = state.protocols[codigo];
 
-    const index = queue.findIndex(
-        ([key]) => key === codigo
-    );
+    const index = waitingQueue(state, item.especialidade)
+        .findIndex(([key]) => key === codigo);
 
-    return index === -1 ? null : index + 1;
-}
-
-function getProtocol(codigo) {
-    const item = protocols.get(codigo);
-
-    if (!item) return undefined;
-
-    const position = getPosition(codigo);
+    const position = index === -1 ? null : index + 1;
 
     return {
         codigo,
         status: item.status,
         especialidade: item.especialidade,
         posicao: position,
-        pessoasNaFrente:
-            position === null ? null : position - 1,
+        pessoasNaFrente: position === null ? null : position - 1,
         consulta: item.consulta,
         canal: item.canal
     };
 }
 
-function getQueue() {
-    return waitingQueue()
-        .map(([codigo]) => getProtocol(codigo));
-}
-
-function snapshot() {
+function snapshot(state) {
     return {
-        unit,
-        doctor,
-        offer,
-        relatos: reports.filter(
-            report =>
-                Date.now() - report.time < 1800000
+        unit: state.unit,
+        doctor: state.doctor,
+        offer: state.offer,
+        relatos: state.reports.filter(
+            item => Date.now() - item.time < 1800000
         ).length,
-        agenda: agenda.filter(
-            item => item.disponivel
-        ),
-        totalAgendamentos: bookings.length,
-        totalFila: waitingQueue().length
+        agenda: state.agenda.filter(item => item.disponivel),
+        totalAgendamentos: state.bookings.length,
+        totalFila: waitingQueue(state).length
     };
 }
 
-function publish() {
-    const event =
-        'data: ' +
-        JSON.stringify(snapshot()) +
+function generateCode() {
+    return 'SUS-' +
+        randomUUID()
+            .replace(/-/g, '')
+            .slice(0, 12)
+            .toUpperCase();
+}
+
+const streams = new Set();
+
+function publish(state) {
+    const event = 'data: ' +
+        JSON.stringify(snapshot(state)) +
         '\n\n';
 
     for (const stream of streams) {
@@ -248,104 +285,83 @@ const types = {
 };
 
 createServer(async (req, res) => {
-    const path = new URL(
-        req.url,
-        'http://localhost'
-    ).pathname;
+    const path = new URL(req.url, 'http://localhost').pathname;
 
     const send = (code, data) => {
         res.writeHead(code, {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=utf-8',
             'Cache-Control': 'no-store'
         });
 
         res.end(JSON.stringify(data));
     };
 
-    const invalid = message =>
-        send(409, { erro: message });
+    const invalid = message => send(409, { erro: message });
 
     try {
-        if (
-            req.method === 'GET' &&
-            Object.hasOwn(assets, path)
-        ) {
+        if (req.method === 'GET' && Object.hasOwn(assets, path)) {
             const file = assets[path];
 
             const content = await readFile(
-                new URL(
-                    '../web/' + file,
-                    import.meta.url
-                )
+                new URL('../web/' + file, import.meta.url)
             );
 
             res.writeHead(200, {
-                'Content-Type':
-                    types[file] + '; charset=utf-8'
+                'Content-Type': types[file] + '; charset=utf-8'
             });
 
             return res.end(content);
         }
 
-        if (
-            req.method === 'GET' &&
-            path === '/events'
-        ) {
-            res.writeHead(200, {
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache'
-            });
+        if (req.method === 'GET') {
+            const state = await loadState();
 
-            streams.add(res);
+            if (path === '/state') {
+                return send(200, snapshot(state));
+            }
 
-            res.write(
-                'data: ' +
-                JSON.stringify(snapshot()) +
-                '\n\n'
-            );
+            if (path === '/agenda') {
+                return send(
+                    200,
+                    state.agenda.filter(item => item.disponivel)
+                );
+            }
 
-            res.on('close', () => {
-                streams.delete(res);
-            });
+            if (path === '/agendamentos') {
+                return send(200, state.bookings);
+            }
 
-            return;
-        }
+            if (path === '/fila') {
+                return send(
+                    200,
+                    waitingQueue(state).map(
+                        ([codigo]) => getProtocol(state, codigo)
+                    )
+                );
+            }
 
-        if (
-            req.method === 'GET' &&
-            path === '/state'
-        ) {
-            return send(200, snapshot());
-        }
+            if (path === '/events') {
+                res.writeHead(200, {
+                    'Content-Type': 'text/event-stream',
+                    'Cache-Control': 'no-cache'
+                });
 
-        if (
-            req.method === 'GET' &&
-            path === '/agenda'
-        ) {
-            return send(
-                200,
-                agenda.filter(item => item.disponivel)
-            );
-        }
+                streams.add(res);
 
-        if (
-            req.method === 'GET' &&
-            path === '/agendamentos'
-        ) {
-            return send(200, bookings);
-        }
+                res.write(
+                    'data: ' +
+                    JSON.stringify(snapshot(state)) +
+                    '\n\n'
+                );
 
-        if (
-            req.method === 'GET' &&
-            path === '/fila'
-        ) {
-            return send(200, getQueue());
+                res.on('close', () => streams.delete(res));
+
+                return;
+            }
         }
 
         if (req.method !== 'POST') {
-            return send(404, {
-                erro: 'Rota inexistente.'
-            });
+            return send(404, { erro: 'Rota inexistente.' });
         }
 
         let raw = '';
@@ -360,7 +376,21 @@ createServer(async (req, res) => {
             }
         }
 
-        const body = JSON.parse(raw || '{}');
+        let body;
+
+        try {
+            body = JSON.parse(raw || '{}');
+
+            if (!body || typeof body !== 'object' || Array.isArray(body)) {
+                throw new Error();
+            }
+        } catch {
+            return send(400, {
+                erro: 'Dados inválidos.'
+            });
+        }
+
+        const state = await loadState();
 
         const {
             codigo,
@@ -372,48 +402,58 @@ createServer(async (req, res) => {
             especialidade
         } = body;
 
-        const protocol = protocols.get(codigo);
+        const protocol = Object.hasOwn(state.protocols, codigo)
+            ? state.protocols[codigo]
+            : undefined;
 
-        const validLoad = [
-            'tranquila',
-            'moderada',
-            'lotada'
-        ].includes(lotacao);
-
-        if (path === '/entrar-fila') {
-            const specialties = [
-                'Cardiologia',
-                'Clínica Geral',
-                'Oftalmologia'
-            ];
-
-            if (
-                !specialties.includes(especialidade)
-            ) {
+        const commit = async (code, extra = {}) => {
+            if (!await saveState(state)) {
                 return invalid(
-                    'Escolha uma especialidade válida.'
+                    'Os dados foram atualizados por outro usuário. Tente novamente.'
                 );
             }
 
-            const generatedCode =
-                'SUS-' +
-                randomUUID()
-                    .replace(/-/g, '')
-                    .slice(0, 12)
-                    .toUpperCase();
+            publish(state);
 
-            protocols.set(generatedCode, {
+            return send(code, {
+                ...snapshot(state),
+                ...extra
+            });
+        };
+
+        if (path === '/protocolo') {
+            if (!protocol) {
+                return send(404, {
+                    erro: 'Protocolo não encontrado.'
+                });
+            }
+
+            return send(200, {
+                ...snapshot(state),
+                protocolo: getProtocol(state, codigo)
+            });
+        }
+
+        if (path === '/entrar-fila') {
+            if (![
+                'Cardiologia',
+                'Clínica Geral',
+                'Oftalmologia'
+            ].includes(especialidade)) {
+                return invalid('Escolha uma especialidade válida.');
+            }
+
+            const generatedCode = generateCode();
+
+            state.protocols[generatedCode] = {
                 status: 'aguardando',
                 especialidade,
                 canal: 'app',
-                ordem: ++sequence
-            });
+                ordem: ++state.sequence
+            };
 
-            publish();
-
-            return send(201, {
-                ...snapshot(),
-                protocolo: getProtocol(generatedCode)
+            return await commit(201, {
+                protocolo: getProtocol(state, generatedCode)
             });
         }
 
@@ -430,31 +470,23 @@ createServer(async (req, res) => {
 
             protocol.status = 'cancelado';
 
-            publish();
-
-            return send(200, {
-                ...snapshot(),
-                protocolo: getProtocol(codigo)
+            return await commit(200, {
+                protocolo: getProtocol(state, codigo)
             });
         }
 
         if (path === '/agendar') {
-            const slot = agenda.find(
+            const slot = state.agenda.find(
                 item => item.id === horarioId
             );
 
             if (!slot || !slot.disponivel) {
                 return invalid(
-                    'Este horário não está mais disponível. Escolha outro horário.'
+                    'Este horário não está mais disponível.'
                 );
             }
 
-            const generatedCode =
-                'SUS-' +
-                randomUUID()
-                    .replace(/-/g, '')
-                    .slice(0, 12)
-                    .toUpperCase();
+            const generatedCode = generateCode();
 
             slot.disponivel = false;
 
@@ -472,19 +504,16 @@ createServer(async (req, res) => {
                 registradoEm: new Date().toISOString()
             };
 
-            bookings.push(booking);
+            state.bookings.push(booking);
 
-            protocols.set(generatedCode, {
+            state.protocols[generatedCode] = {
                 status: 'confirmado',
                 especialidade: slot.especialidade,
                 canal: 'agendinha',
                 consulta: booking
-            });
+            };
 
-            publish();
-
-            return send(201, {
-                ...snapshot(),
+            return await commit(201, {
                 agendamento: booking
             });
         }
@@ -493,26 +522,23 @@ createServer(async (req, res) => {
             path === '/presenca' &&
             typeof presente === 'boolean'
         ) {
-            Object.assign(doctor, {
-                presente,
-                atualizado: new Date().toISOString()
-            });
+            state.doctor.presente = presente;
+            state.doctor.atualizado = new Date().toISOString();
         }
 
         else if (
-            (
-                path === '/lotacao' ||
-                path === '/checkin'
-            ) &&
-            validLoad
+            ['/lotacao', '/checkin'].includes(path) &&
+            ['tranquila', 'moderada', 'lotada'].includes(lotacao)
         ) {
-            Object.assign(unit, {
-                lotacao,
-                atualizado: new Date().toISOString()
-            });
+            state.unit.lotacao = lotacao;
+            state.unit.atualizado = new Date().toISOString();
 
             if (path === '/checkin') {
-                reports.push({
+                state.reports = state.reports.filter(
+                    item => Date.now() - item.time < 1800000
+                );
+
+                state.reports.push({
                     time: Date.now(),
                     lotacao
                 });
@@ -532,18 +558,18 @@ createServer(async (req, res) => {
                 );
             }
 
-            protocols.set(codigo, {
+            state.protocols[codigo] = {
                 status: 'aguardando',
                 especialidade: 'Cardiologia',
                 canal: 'telefone_voz'
-            });
+            };
         }
 
         else if (path === '/chamar') {
             if (
                 protocol?.canal !== 'telefone_voz' ||
                 protocol.status !== 'aguardando' ||
-                offer
+                state.offer
             ) {
                 return invalid(
                     'Não foi possível iniciar esta chamada.'
@@ -557,26 +583,25 @@ createServer(async (req, res) => {
             if (
                 protocol?.status !== 'chamado' ||
                 ![1, 2].includes(tecla) ||
-                (tecla === 2 && offer)
+                (tecla === 2 && state.offer)
             ) {
                 return invalid(
                     'A chamada ou a vaga não está disponível.'
                 );
             }
 
-            protocol.status =
-                tecla === 1
-                    ? 'confirmado'
-                    : 'cancelado_vaga_liberada';
+            protocol.status = tecla === 1
+                ? 'confirmado'
+                : 'cancelado_vaga_liberada';
 
             if (tecla === 2) {
-                offer = true;
+                state.offer = true;
             }
         }
 
         else if (path === '/encaixe') {
             if (
-                !offer ||
+                !state.offer ||
                 protocol?.canal !== 'app' ||
                 protocol.status !== 'aguardando' ||
                 protocol.especialidade !== 'Cardiologia'
@@ -586,54 +611,48 @@ createServer(async (req, res) => {
                 );
             }
 
-            if (getPosition(codigo) !== 1) {
+            if (getProtocol(state, codigo).posicao !== 1) {
                 return invalid(
                     'A vaga está reservada para o primeiro cidadão da fila.'
                 );
             }
 
             protocol.status = 'confirmado';
-            offer = false;
+            state.offer = false;
         }
 
-        else if (path !== '/protocolo') {
+        else {
             return send(400, {
                 erro: 'Ação ou dados inválidos.'
             });
         }
 
-        if (
-            path === '/protocolo' &&
-            !protocol
-        ) {
-            return send(404, {
-                erro: 'Protocolo não encontrado.'
-            });
-        }
-
-        if (path !== '/protocolo') {
-            publish();
-        }
-
-        return send(200, {
-            ...snapshot(),
-            protocolo: getProtocol(codigo)
+        return await commit(200, {
+            protocolo: getProtocol(state, codigo)
         });
 
-    } catch {
+    } catch (error) {
+        console.error('Falha na operação:', error.message);
+
         if (!res.headersSent) {
-            send(400, {
-                erro: 'Não foi possível processar a requisição.'
+            send(503, {
+                erro: 'Serviço temporariamente indisponível. Tente novamente.'
             });
         } else {
             res.end();
         }
     }
+
 }).listen(
     Number(process.env.PORT || 8080),
     '0.0.0.0',
-    () => console.log(
-        'PostoVivo SUS em http://localhost:' +
-        (process.env.PORT || 8080)
-    )
+    () => {
+        console.log('PostoVivo SUS iniciado.');
+
+        console.log(
+            databaseEnabled
+                ? 'Armazenamento: Supabase'
+                : 'Armazenamento: memória local'
+        );
+    }
 );
